@@ -20,7 +20,7 @@ jobs:
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "Nuevo push en GitHub",
+                  "text": "Nuevo push en ${{ github.repository }}",
                   "emoji": true
                 }
               },
