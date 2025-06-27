@@ -33,10 +33,6 @@ jobs:
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Branch:*\n${{ github.ref_name }}"
-                  },
-                  {
-                    "type": "mrkdwn",
                     "text": "*Commit:*\n${{ github.event.head_commit.message }}"
                   }
                 ]
