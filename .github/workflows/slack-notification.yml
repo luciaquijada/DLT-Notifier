@@ -16,6 +16,7 @@ jobs:
         with:
           payload: |
             {
+              "text": "New push in repository ${{ github.repository }}",
               "blocks": [
                 {
                   "type": "header",
