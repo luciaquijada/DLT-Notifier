@@ -1,0 +1,67 @@
+name: Slack Notification (on push)
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  slackNotification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Slack Notification with curl
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "text": "[${{ github.repository }}] New push to ${{ github.ref_name }}",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "[${{ github.repository }}] Push to ${{ github.ref_name }}",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Author:*\n${{ github.actor }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Commit:*\n${{ github.event.head_commit.message }}"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Commit"
+                    },
+                    "url": "${{ github.event.head_commit.url }}",
+                    "style": "primary"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "${{
+                      github.event.head_commit.timestamp }}"
+                  }
+                ]
+              }
+            ]
+          }' $SLACK_WEBHOOK_URL
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
