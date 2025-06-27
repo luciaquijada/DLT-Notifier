@@ -22,7 +22,12 @@ jobs:
           MAP_FILE=".github/slack-reviewer-map.json"
 
           echo "🔍 Buscando PRs abiertas..."
-          PRS=$(gh pr list --state open --json number,title,url,createdAt,reviewRequests,reviews,author -q '.[]')
+          PRS=$(gh pr list --state open --json number,title,url,createdAt,reviewRequests,reviews,author)
+
+          if [ "$PRS" == "[]" ] || [ -z "$PRS" ]; then
+            echo "✅ No hay PRs abiertas para revisar hoy."
+            exit 0
+          fi
 
           declare -A reminders
 
@@ -34,8 +39,13 @@ jobs:
             reviewers=$(echo $pr | jq -r '.reviewRequests[].login')
             approvals=$(echo $pr | jq -r '.reviews[] | select(.state == "APPROVED") | .author.login' | sort -u)
 
+            # Calcular días desde creación
+            created_ts=$(date -d "$created" +%s)
+            now_ts=$(date +%s)
+            days_open=$(( (now_ts - created_ts) / 86400 ))
+
             for reviewer in $reviewers; do
-              # Si el revisor ya aprobó, lo ignoramos
+              # Ignorar si ya ha aprobado
               if echo "$approvals" | grep -q "^$reviewer$"; then
                 continue
               fi
@@ -49,7 +59,7 @@ jobs:
               fi
 
               # Agregar mensaje para el revisor
-              line="• <$url|#${number}> $title – open since ${created:0:10}"
+              line="• <$url|#${number}> $title – open for ${days_open} day(s)"
               reminders[$slack_id]="${reminders[$slack_id]}$line\n"
             done
           done
