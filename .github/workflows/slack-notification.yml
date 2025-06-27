@@ -17,69 +17,60 @@ jobs:
       - name: Send Slack Notification with curl
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref_name }}
-          AUTHOR: ${{ github.actor }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          COMMIT_URL: ${{ github.event.head_commit.url }}
-          TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         run: |
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.ref_name }}"
+          AUTHOR="${{ github.actor }}"
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_URL="${{ github.event.head_commit.url }}"
+          TIMESTAMP="${{ github.event.head_commit.timestamp }}"
+
           EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' .github/repo-style-map.json)
 
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"$EMOJI New push in $REPO\",
-            \"blocks\": [
-              {
-                \"type\": \"header\",
-                \"text\": {
-                  \"type\": \"plain_text\",
-                  \"text\": \"$EMOJI Push in $REPO\",
-                  \"emoji\": true
+          curl -X POST -H "Content-type: application/json" --data "$(jq -n \
+            --arg emoji "$EMOJI" \
+            --arg repo "$REPO" \
+            --arg branch "$BRANCH" \
+            --arg author "$AUTHOR" \
+            --arg message "$COMMIT_MSG" \
+            --arg url "$COMMIT_URL" \
+            --arg time "$TIMESTAMP" \
+            '{
+              text: "\($emoji) New push in \($repo)",
+              blocks: [
+                {
+                  type: "header",
+                  text: {
+                    type: "plain_text",
+                    text: "\($emoji) Push in \($repo)",
+                    emoji: true
+                  }
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: "*Repositorio:*\n\($repo)" },
+                    { type: "mrkdwn", text: "*Rama:*\n\($branch)" },
+                    { type: "mrkdwn", text: "*Autor:*\n\($author)" },
+                    { type: "mrkdwn", text: "*Commit:*\n\($message)" }
+                  ]
+                },
+                {
+                  type: "actions",
+                  elements: [
+                    {
+                      type: "button",
+                      text: { type: "plain_text", text: "Ver Commit en GitHub" },
+                      url: $url,
+                      style: "primary"
+                    }
+                  ]
+                },
+                {
+                  type: "context",
+                  elements: [
+                    { type: "mrkdwn", text: "⏰ \($time)" }
+                  ]
                 }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Repositorio:*\n$REPO\"
-                  },
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Rama:*\n$BRANCH\"
-                  },
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Autor:*\n$AUTHOR\"
-                  },
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Commit:*\n$COMMIT_MSG\"
-                  }
-                ]
-              },
-              {
-                \"type\": \"actions\",
-                \"elements\": [
-                  {
-                    \"type\": \"button\",
-                    \"text\": {
-                      \"type\": \"plain_text\",
-                      \"text\": \"Ver Commit en GitHub\"
-                    },
-                    \"url\": \"$COMMIT_URL\",
-                    \"style\": \"primary\"
-                  }
-                ]
-              },
-              {
-                \"type\": \"context\",
-                \"elements\": [
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"⏰ $TIMESTAMP\"
-                  }
-                ]
-              }
-            ]
-          }" "$SLACK_WEBHOOK_URL"
+              ]
+            }')" "$SLACK_WEBHOOK_URL"
