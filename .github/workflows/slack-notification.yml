@@ -1,28 +1,28 @@
-name: Slack Notification (on push)
+name: Slack Notification
 
 on:
   push:
     branches:
-      - develop  
+      - develop
       - main
 
 jobs:
-  slackNotification:
+  notifySlack:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Slack Notification
+      - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |
             {
-              "text": "New push in repository ${{ github.repository }}",
+              "text": "🚀 Push notification for repository ${{ github.repository }}",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Nuevo push en GitHub",
+                    "text": "🚀 Nuevo push en GitHub",
                     "emoji": true
                   }
                 },
@@ -54,7 +54,7 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "Ver Commit en GitHub"
+                        "text": "🔍 Ver Commit en GitHub"
                       },
                       "url": "${{ github.event.head_commit.url }}",
                       "style": "primary"
@@ -66,7 +66,7 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Commit: ${{ github.event.head_commit.timestamp }}"
+                      "text": "🕒 Fecha del commit: ${{ github.event.head_commit.timestamp }}"
                     }
                   ]
                 }
