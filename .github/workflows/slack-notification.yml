@@ -14,13 +14,13 @@ jobs:
       - name: Send Slack Notification with curl
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "New push in repository ${{ github.repository }}",
+            "text": "[${{ github.repository }}] New push to ${{ github.ref_name }}",
             "blocks": [
               {
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "Nuevo push en ${{ github.repository }}",
+                  "text": "[${{ github.repository }}] Push to ${{ github.ref_name }}",
                   "emoji": true
                 }
               },
@@ -29,15 +29,11 @@ jobs:
                 "fields": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Repositorio:*\n${{ github.repository }}"
+                    "text": "*Author:*\n${{ github.actor }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Rama:*\n${{ github.ref_name }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Autor:*\n${{ github.actor }}"
+                    "text": "*Branch:*\n${{ github.ref_name }}"
                   },
                   {
                     "type": "mrkdwn",
@@ -52,7 +48,7 @@ jobs:
                     "type": "button",
                     "text": {
                       "type": "plain_text",
-                      "text": "Ver Commit en GitHub"
+                      "text": "View Commit"
                     },
                     "url": "${{ github.event.head_commit.url }}",
                     "style": "primary"
@@ -64,7 +60,8 @@ jobs:
                 "elements": [
                   {
                     "type": "mrkdwn",
-                    "text": "Commit: ${{ github.event.head_commit.timestamp }}"
+                    "text": "${{
+                      github.event.head_commit.timestamp }}"
                   }
                 ]
               }

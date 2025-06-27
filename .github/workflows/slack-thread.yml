@@ -1,61 +1,61 @@
-name: GitKeeper Slack Notification
+# name: GitKeeper Slack Notification
 
-on:
-  push:
-    branches:
-      - main
-      - develop
+# on:
+#   push:
+#     branches:
+#       - main
+#       - develop
 
-jobs:
-  notifySlack:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send message to Slack thread
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-        run: |
-          curl -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-            -H "Content-type: application/json" \
-            --data "{
-              \"channel\": \"C029374G093\",
-              \"thread_ts\": \"1751011658.929179\",
-              \"text\": \"📌 Push to *${{ github.ref_name }}* by *${{ github.actor }}* 🚀\",
-              \"blocks\": [
-                {
-                  \"type\": \"section\",
-                  \"fields\": [
-                    {
-                      \"type\": \"mrkdwn\",
-                      \"text\": \"*Repo:*\\n${{ github.repository }}\"
-                    },
-                    {
-                      \"type\": \"mrkdwn\",
-                      \"text\": \"*Branch:*\\n${{ github.ref_name }}\"
-                    },
-                    {
-                      \"type\": \"mrkdwn\",
-                      \"text\": \"*Author:*\\n${{ github.actor }}\"
-                    },
-                    {
-                      \"type\": \"mrkdwn\",
-                      \"text\": \"*Commit:*\\n${{ github.event.head_commit.message }}\"
-                    }
-                  ]
-                },
-                {
-                  \"type\": \"actions\",
-                  \"elements\": [
-                    {
-                      \"type\": \"button\",
-                      \"text\": {
-                        \"type\": \"plain_text\",
-                        \"text\": \"🔍 View Commit\"
-                      },
-                      \"url\": \"${{ github.event.head_commit.url }}\",
-                      \"style\": \"primary\"
-                    }
-                  ]
-                }
-              ]
-            }"
+# jobs:
+#   notifySlack:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Send message to Slack thread
+#         env:
+#           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+#         run: |
+#           curl -X POST https://slack.com/api/chat.postMessage \
+#             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+#             -H "Content-type: application/json" \
+#             --data "{
+#               \"channel\": \"C029374G093\",
+#               \"thread_ts\": \"1751011658.929179\",
+#               \"text\": \"📌 Push to *${{ github.ref_name }}* by *${{ github.actor }}* 🚀\",
+#               \"blocks\": [
+#                 {
+#                   \"type\": \"section\",
+#                   \"fields\": [
+#                     {
+#                       \"type\": \"mrkdwn\",
+#                       \"text\": \"*Repo:*\\n${{ github.repository }}\"
+#                     },
+#                     {
+#                       \"type\": \"mrkdwn\",
+#                       \"text\": \"*Branch:*\\n${{ github.ref_name }}\"
+#                     },
+#                     {
+#                       \"type\": \"mrkdwn\",
+#                       \"text\": \"*Author:*\\n${{ github.actor }}\"
+#                     },
+#                     {
+#                       \"type\": \"mrkdwn\",
+#                       \"text\": \"*Commit:*\\n${{ github.event.head_commit.message }}\"
+#                     }
+#                   ]
+#                 },
+#                 {
+#                   \"type\": \"actions\",
+#                   \"elements\": [
+#                     {
+#                       \"type\": \"button\",
+#                       \"text\": {
+#                         \"type\": \"plain_text\",
+#                         \"text\": \"🔍 View Commit\"
+#                       },
+#                       \"url\": \"${{ github.event.head_commit.url }}\",
+#                       \"style\": \"primary\"
+#                     }
+#                   ]
+#                 }
+#               ]
+#             }"
