@@ -17,26 +17,40 @@ jobs:
       - name: Send Slack Notification with curl
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          AUTHOR: ${{ github.actor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         run: |
-          echo "📦 Cargando estilo de repositorio..."
-          STYLE=$(jq -r --arg repo "${{ github.repository }}" '.[$repo]' .github/repo-style-map.json)
-          EMOJI=$(echo "$STYLE" | jq -r '.emoji')
-          IMAGE_URL=$(echo "$STYLE" | jq -r '.image_url')
+          echo "📦 Loading style for $REPO..."
+          STYLE=$(jq -r --arg repo "$REPO" '.[$repo]' .github/repo-style-map.json)
 
-          echo "🚀 Enviando notificación a Slack..."
+          if [ "$STYLE" = "null" ] || [ -z "$STYLE" ]; then
+            echo "⚠️ No style found for $REPO, using fallback."
+            EMOJI="📦"
+            IMAGE_URL="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Git_icon.svg/120px-Git_icon.svg.png"
+          else
+            EMOJI=$(echo "$STYLE" | jq -r '.emoji')
+            IMAGE_URL=$(echo "$STYLE" | jq -r '.image_url')
+          fi
+
+          echo "🔔 Sending message with emoji $EMOJI and image $IMAGE_URL..."
+
           curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"${EMOJI} Push in *${{ github.repository }}*\",
+            \"text\": \"${EMOJI} Push in *$REPO*\",
             \"blocks\": [
               {
                 \"type\": \"image\",
-                \"image_url\": \"${IMAGE_URL}\",
+                \"image_url\": \"$IMAGE_URL\",
                 \"alt_text\": \"Repo Logo\"
               },
               {
                 \"type\": \"header\",
                 \"text\": {
                   \"type\": \"plain_text\",
-                  \"text\": \"${EMOJI} Push to ${{ github.ref_name }}\",
+                  \"text\": \"${EMOJI} Push to $BRANCH\",
                   \"emoji\": true
                 }
               },
@@ -45,11 +59,11 @@ jobs:
                 \"fields\": [
                   {
                     \"type\": \"mrkdwn\",
-                    \"text\": \"*Author:*\n${{ github.actor }}\"
+                    \"text\": \"*Author:*\n$AUTHOR\"
                   },
                   {
                     \"type\": \"mrkdwn\",
-                    \"text\": \"*Commit:*\n${{ github.event.head_commit.message }}\"
+                    \"text\": \"*Commit:*\n$COMMIT_MESSAGE\"
                   }
                 ]
               },
@@ -62,7 +76,7 @@ jobs:
                       \"type\": \"plain_text\",
                       \"text\": \"🔍 View Commit\"
                     },
-                    \"url\": \"${{ github.event.head_commit.url }}\",
+                    \"url\": \"$COMMIT_URL\",
                     \"style\": \"primary\"
                   }
                 ]
@@ -72,7 +86,7 @@ jobs:
                 \"elements\": [
                   {
                     \"type\": \"mrkdwn\",
-                    \"text\": \"⏰ ${{ github.event.head_commit.timestamp }}\"
+                    \"text\": \"⏰ $TIMESTAMP\"
                   }
                 ]
               }
