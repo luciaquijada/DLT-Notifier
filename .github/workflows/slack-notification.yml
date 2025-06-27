@@ -20,37 +20,20 @@ jobs:
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
           AUTHOR: ${{ github.actor }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
           TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         run: |
-          echo "📦 Loading style for $REPO..."
-          STYLE=$(jq -r --arg repo "$REPO" '.[$repo]' .github/repo-style-map.json)
-
-          if [ "$STYLE" = "null" ] || [ -z "$STYLE" ]; then
-            echo "⚠️ No style found for $REPO, using fallback."
-            EMOJI="📦"
-            IMAGE_URL="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Git_icon.svg/120px-Git_icon.svg.png"
-          else
-            EMOJI=$(echo "$STYLE" | jq -r '.emoji')
-            IMAGE_URL=$(echo "$STYLE" | jq -r '.image_url')
-          fi
-
-          echo "🔔 Sending message with emoji $EMOJI and image $IMAGE_URL..."
+          EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' .github/repo-style-map.json)
 
           curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"${EMOJI} Push in *$REPO*\",
+            \"text\": \"$EMOJI New push in $REPO\",
             \"blocks\": [
-              {
-                \"type\": \"image\",
-                \"image_url\": \"$IMAGE_URL\",
-                \"alt_text\": \"Repo Logo\"
-              },
               {
                 \"type\": \"header\",
                 \"text\": {
                   \"type\": \"plain_text\",
-                  \"text\": \"${EMOJI} Push to $BRANCH\",
+                  \"text\": \"$EMOJI Push in $REPO\",
                   \"emoji\": true
                 }
               },
@@ -59,11 +42,19 @@ jobs:
                 \"fields\": [
                   {
                     \"type\": \"mrkdwn\",
-                    \"text\": \"*Author:*\n$AUTHOR\"
+                    \"text\": \"*Repositorio:*\n$REPO\"
                   },
                   {
                     \"type\": \"mrkdwn\",
-                    \"text\": \"*Commit:*\n$COMMIT_MESSAGE\"
+                    \"text\": \"*Rama:*\n$BRANCH\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Autor:*\n$AUTHOR\"
+                  },
+                  {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Commit:*\n$COMMIT_MSG\"
                   }
                 ]
               },
@@ -74,7 +65,7 @@ jobs:
                     \"type\": \"button\",
                     \"text\": {
                       \"type\": \"plain_text\",
-                      \"text\": \"🔍 View Commit\"
+                      \"text\": \"Ver Commit en GitHub\"
                     },
                     \"url\": \"$COMMIT_URL\",
                     \"style\": \"primary\"
@@ -91,4 +82,4 @@ jobs:
                 ]
               }
             ]
-          }" $SLACK_WEBHOOK_URL
+          }" "$SLACK_WEBHOOK_URL"

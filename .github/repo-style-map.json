@@ -1,22 +1,7 @@
 {
-  "luciaquijada/DLT-Notifier": {
-    "emoji": "🛰️",
-    "color": "#36C5F0",
-    "image_url": "https://yourdomain.com/assets/dlt-notifier.png"
-  },
-
-  "AIRInstitute/AirInteraction": {
-    "emoji": "🌐",
-    "color": "#4CAF50",
-    "image_url": "https://maya-interactivo-dev.bisite.es/svg/maya-Interactivo_cb.svg"
-  },
-
-
-  "bisite/cyberchain-explorer": {
-    "emoji": "📚",
-    "color": "#FF9800",
-    "image_url": "https://cyberchain.bisite.es/assets/logo_light-S1NEXdk3.svg"
-  }
+  "luciaquijada/DLT-Notifier": "🛰️",
+  "bisite/cyberchain-explorer": "🚀",
+  "AIRInstitute/AirInteraction": "🔧"
 }
 
 
