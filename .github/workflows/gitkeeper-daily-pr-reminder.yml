@@ -2,7 +2,8 @@ name: GitKeeper – Daily Pending PR Reminder
 
 on:
   schedule:
-    - cron: '30 9 * * *'  # Ejecuta todos los días a las 09:30 UTC
+    - cron: '15 9 * * *'  # 09:15 UTC → 11:15 en España (CEST)
+  workflow_dispatch:
 
 jobs:
   dailyReminder:
