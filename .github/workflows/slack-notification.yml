@@ -11,57 +11,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
       - name: Send Slack Notification with curl
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "[${{ github.repository }}] New push to ${{ github.ref_name }}",
-            "blocks": [
+          echo "📦 Cargando estilo de repositorio..."
+          STYLE=$(jq -r --arg repo "${{ github.repository }}" '.[$repo]' .github/repo-style-map.json)
+          EMOJI=$(echo "$STYLE" | jq -r '.emoji')
+          IMAGE_URL=$(echo "$STYLE" | jq -r '.image_url')
+
+          echo "🚀 Enviando notificación a Slack..."
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"text\": \"${EMOJI} Push in *${{ github.repository }}*\",
+            \"blocks\": [
               {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "[${{ github.repository }}] Push to ${{ github.ref_name }}",
-                  "emoji": true
+                \"type\": \"image\",
+                \"image_url\": \"${IMAGE_URL}\",
+                \"alt_text\": \"Repo Logo\"
+              },
+              {
+                \"type\": \"header\",
+                \"text\": {
+                  \"type\": \"plain_text\",
+                  \"text\": \"${EMOJI} Push to ${{ github.ref_name }}\",
+                  \"emoji\": true
                 }
               },
               {
-                "type": "section",
-                "fields": [
+                \"type\": \"section\",
+                \"fields\": [
                   {
-                    "type": "mrkdwn",
-                    "text": "*Author:*\n${{ github.actor }}"
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Author:*\n${{ github.actor }}\"
                   },
                   {
-                    "type": "mrkdwn",
-                    "text": "*Commit:*\n${{ github.event.head_commit.message }}"
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Commit:*\n${{ github.event.head_commit.message }}\"
                   }
                 ]
               },
               {
-                "type": "actions",
-                "elements": [
+                \"type\": \"actions\",
+                \"elements\": [
                   {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Commit"
+                    \"type\": \"button\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \"🔍 View Commit\"
                     },
-                    "url": "${{ github.event.head_commit.url }}",
-                    "style": "primary"
+                    \"url\": \"${{ github.event.head_commit.url }}\",
+                    \"style\": \"primary\"
                   }
                 ]
               },
               {
-                "type": "context",
-                "elements": [
+                \"type\": \"context\",
+                \"elements\": [
                   {
-                    "type": "mrkdwn",
-                    "text": "${{
-                      github.event.head_commit.timestamp }}"
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"⏰ ${{ github.event.head_commit.timestamp }}\"
                   }
                 ]
               }
             ]
-          }' $SLACK_WEBHOOK_URL
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          }" $SLACK_WEBHOOK_URL
