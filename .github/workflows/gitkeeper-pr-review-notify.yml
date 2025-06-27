@@ -2,7 +2,7 @@ name: GitKeeper – Notify Reviewers via Slack DM (manual map)
 
 on:
   pull_request:
-    types: [opened, review_requested]
+    types: [review_requested]
 
 jobs:
   notifyReviewers:
