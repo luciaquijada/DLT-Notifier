@@ -1,21 +1,26 @@
-name: Push Slack Notification
-description: Send a styled Slack message when pushing to develop/main
+name: GitKeeper Slack Notifier
+description: Send Slack notifications on push or PR assignment
 
 inputs:
+  mode:
+    description: "Operation mode: 'push' or 'pr-review'"
+    required: true
   webhook_url:
-    required: true
+    required: false
+  slack_bot_token:
+    required: false
   repo_name:
-    required: true
+    required: false
   branch:
-    required: true
+    required: false
   author:
-    required: true
+    required: false
   commit_message:
-    required: true
+    required: false
   commit_url:
-    required: true
+    required: false
   timestamp:
-    required: true
+    required: false
 
 runs:
   using: "composite"
@@ -23,7 +28,9 @@ runs:
     - run: bash ${{ github.action_path }}/send.sh
       shell: bash
       env:
+        MODE: ${{ inputs.mode }}
         SLACK_WEBHOOK_URL: ${{ inputs.webhook_url }}
+        SLACK_BOT_TOKEN: ${{ inputs.slack_bot_token }}
         REPO: ${{ inputs.repo_name }}
         BRANCH: ${{ inputs.branch }}
         AUTHOR: ${{ inputs.author }}
