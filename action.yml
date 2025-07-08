@@ -21,6 +21,10 @@ inputs:
     required: false
   timestamp:
     required: false
+  pr_url:
+    required: false
+  reviewers:
+    required: false
 
 runs:
   using: "composite"
@@ -37,3 +41,5 @@ runs:
         COMMIT_MESSAGE: ${{ inputs.commit_message }}
         COMMIT_URL: ${{ inputs.commit_url }}
         TIMESTAMP: ${{ inputs.timestamp }}
+        PR_URL: ${{ inputs.pr_url }}
+        REVIEWERS: ${{ inputs.reviewers }}

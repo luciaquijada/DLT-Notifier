@@ -51,34 +51,25 @@ elif [ "$MODE" = "pr-review" ]; then
   echo "📚 Cargando mapa de revisores..."
   MAP_FILE=".github/slack-reviewer-map.json"
 
-  echo "🔍 Buscando PRs abiertas..."
-  PRS=$(gh pr list --state open --json number,title,url,createdAt,reviewRequests,reviews,author -q '.[]')
+  echo "🔍 Obteniendo reviewers..."
+  IFS=',' read -ra REVIEWERS <<< "$REVIEWERS"
 
-  declare -A reminders
+  for reviewer in "${REVIEWERS[@]}"; do
+    slack_id=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
+    if [ "$slack_id" == "null" ] || [ -z "$slack_id" ]; then
+      echo "⚠️ No Slack ID para $reviewer"
+      continue
+    fi
 
-  echo "$PRS" | jq -c '.[]' | while read -r pr; do
-    number=$(echo $pr | jq -r '.number')
-    title=$(echo $pr | jq -r '.title')
-    url=$(echo $pr | jq -r '.url')
-    created=$(echo $pr | jq -r '.createdAt')
-    reviewers=$(echo $pr | jq -r '.reviewRequests[].login')
-    approvals=$(echo $pr | jq -r '.reviews[] | select(.state == "APPROVED") | .author.login' | sort -u)
+    message="👋 Has sido asignado para revisar una PR en *$REPO*.\n🔗 $PR_URL"
 
-    for reviewer in $reviewers; do
-      if echo "$approvals" | grep -q "^$reviewer$"; then continue; fi
-      slack_id=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
-      if [ "$slack_id" == "null" ] || [ -z "$slack_id" ]; then continue; fi
-      line="• <$url|#${number}> $title – since ${created:0:10}"
-      reminders[$slack_id]="${reminders[$slack_id]}$line\n"
-    done
-  done
-
-  for slack_id in "${!reminders[@]}"; do
-    message="📌 *You have pending PRs to review:*\n${reminders[$slack_id]}"
     curl -s -X POST https://slack.com/api/chat.postMessage \
       -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
       -H "Content-type: application/json" \
-      --data "{\"channel\": \"$slack_id\", \"text\": \"$message\"}"
+      --data "{
+        \"channel\": \"$slack_id\",
+        \"text\": \"$message\"
+      }"
   done
 
 else
