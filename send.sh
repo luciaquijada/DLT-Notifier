@@ -49,7 +49,7 @@ EOF
 
 elif [ "$MODE" = "pr-review" ]; then
   echo "📚 Cargando mapa de revisores..."
-  MAP_FILE=".github/slack-reviewer-map.json"
+  MAP_FILE= MAP_FILE="${GITHUB_ACTION_PATH}/slack-reviewer-map.json"
 
   echo "🔍 Obteniendo reviewers..."
   IFS=',' read -ra REVIEWERS <<< "$REVIEWERS"
