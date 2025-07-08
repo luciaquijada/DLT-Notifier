@@ -1,26 +1,21 @@
 #!/bin/bash
 
-# Cargar emoji desde el JSON si existe
-EMOJI="📦"
-if [ -f ".github/repo-style-map.json" ]; then
-  VALUE=$(jq -r --arg repo "$REPO" '.[$repo]' .github/repo-style-map.json)
-  if [ "$VALUE" != "null" ]; then
-    EMOJI="$VALUE"
+if [ "$MODE" = "push" ]; then
+  EMOJI="📦"
+  if [ -f ".github/repo-style-map.json" ]; then
+    VALUE=$(jq -r --arg repo "$REPO" '.[$repo]' .github/repo-style-map.json)
+    if [ "$VALUE" != "null" ]; then
+      EMOJI="$VALUE"
+    fi
   fi
-fi
 
-# Crear mensaje
-JSON=$(cat <<EOF
+  JSON=$(cat <<EOF
 {
   "text": "$EMOJI New push in $REPO",
   "blocks": [
     {
       "type": "header",
-      "text": {
-        "type": "plain_text",
-        "text": "$EMOJI Push in $REPO",
-        "emoji": true
-      }
+      "text": { "type": "plain_text", "text": "$EMOJI Push in $REPO", "emoji": true }
     },
     {
       "type": "section",
@@ -44,14 +39,40 @@ JSON=$(cat <<EOF
     },
     {
       "type": "context",
-      "elements": [
-        { "type": "mrkdwn", "text": "⏰ $TIMESTAMP" }
-      ]
+      "elements": [{ "type": "mrkdwn", "text": "⏰ $TIMESTAMP" }]
     }
   ]
 }
 EOF
 )
+  curl -X POST -H "Content-type: application/json" --data "$JSON" "$SLACK_WEBHOOK_URL"
 
-# Enviar a Slack
-curl -X POST -H "Content-type: application/json" --data "$JSON" "$SLACK_WEBHOOK_URL"
+elif [ "$MODE" = "pr-review" ]; then
+  echo "📚 Cargando mapa de revisores..."
+  MAP_FILE=".github/slack-reviewer-map.json"
+
+  echo "🔍 Obteniendo reviewers..."
+  IFS=',' read -ra REVIEWERS <<< "$REVIEWERS"
+
+  for reviewer in "${REVIEWERS[@]}"; do
+    slack_id=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
+    if [ "$slack_id" == "null" ] || [ -z "$slack_id" ]; then
+      echo "⚠️ No Slack ID para $reviewer"
+      continue
+    fi
+
+    message="👋 Has sido asignado para revisar una PR en *$REPO*.\n🔗 $PR_URL"
+
+    curl -s -X POST https://slack.com/api/chat.postMessage \
+      -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+      -H "Content-type: application/json" \
+      --data "{
+        \"channel\": \"$slack_id\",
+        \"text\": \"$message\"
+      }"
+  done
+
+else
+  echo "❌ Unknown MODE: $MODE"
+  exit 1
+fi
