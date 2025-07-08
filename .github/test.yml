@@ -1,0 +1,23 @@
+name: 🚧 Test Slack Push Notification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  testNotification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout action
+        uses: actions/checkout@v3
+
+      - name: Run Slack Push Notification (local test)
+        uses: ./.github/actions/push-slack-notification
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          repo_name: luciaquijada/DLT-Notifier
+          branch: develop
+          author: luciaquijada
+          commit_message: "feat: added Slack notifier"
+          commit_url: "https://github.com/luciaquijada/DLT-Notifier/commit/123456"
+          timestamp: "2025-06-27T11:15:00Z"

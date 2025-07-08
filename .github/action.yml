@@ -1,0 +1,32 @@
+name: Push Slack Notification
+description: Send a styled Slack message when pushing to develop/main
+
+inputs:
+  webhook_url:
+    required: true
+  repo_name:
+    required: true
+  branch:
+    required: true
+  author:
+    required: true
+  commit_message:
+    required: true
+  commit_url:
+    required: true
+  timestamp:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - run: bash ./send.sh
+      shell: bash
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.webhook_url }}
+        REPO: ${{ inputs.repo_name }}
+        BRANCH: ${{ inputs.branch }}
+        AUTHOR: ${{ inputs.author }}
+        COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        COMMIT_URL: ${{ inputs.commit_url }}
+        TIMESTAMP: ${{ inputs.timestamp }}
