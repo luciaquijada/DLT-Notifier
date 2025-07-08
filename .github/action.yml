@@ -20,7 +20,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: bash ${{ github.action_path }}/send.sh
+    - run: bash ./send.sh
       shell: bash
       env:
         SLACK_WEBHOOK_URL: ${{ inputs.webhook_url }}
