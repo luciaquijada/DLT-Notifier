@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
         
-      - name: Send DM via Slack bot
+      - name: Send DM and group notification via Slack bot
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           REPO: ${{ github.repository }}
@@ -26,7 +26,7 @@ jobs:
           EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' .github/repo-style-map.json)
           MAP_FILE=".github/slack-reviewer-map.json"
 
-          # Obtener todos los usuarios (keys) del JSON
+          # Notificar a todos los usuarios individuales
           USUARIOS=$(jq -r 'keys[]' "$MAP_FILE")
 
           for user in $USUARIOS; do
@@ -62,4 +62,30 @@ jobs:
               }"
           done
 
+          # Notificar también al grupo
+          GROUP_CHANNEL="C097AENKPDX"
 
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"$GROUP_CHANNEL\",
+              \"attachments\": [
+                {
+                  \"color\": \"#36C5F0\",
+                  \"blocks\": [
+                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
+                    { \"type\": \"section\", \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
+                    ]},
+                    { \"type\": \"actions\", \"elements\": [
+                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
+                    ]},
+                    { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
+                  ]
+                }
+              ]
+            }"
