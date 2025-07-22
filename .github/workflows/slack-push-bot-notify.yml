@@ -24,37 +24,42 @@ jobs:
           TIMESTAMP: ${{ github.event.head_commit.timestamp }}
         run: |
           EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' .github/repo-style-map.json)
+          MAP_FILE=".github/slack-reviewer-map.json"
 
-          # Obtener Slack User ID del autor para DM
-          AUTHOR_SLACK_ID=$(jq -r --arg user "$AUTHOR" '.[$user]' .github/slack-reviewer-map.json)
+          # Obtener todos los usuarios (keys) del JSON
+          USUARIOS=$(jq -r 'keys[]' "$MAP_FILE")
 
-          if [ "$AUTHOR_SLACK_ID" == "null" ] || [ -z "$AUTHOR_SLACK_ID" ]; then
-            echo "No se encontró Slack ID para el autor $AUTHOR, notificando en canal público"
-            exit 1
-          fi
+          for user in $USUARIOS; do
+            SLACK_ID=$(jq -r --arg user "$user" '.[$user]' "$MAP_FILE")
+            if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
+              echo "No Slack ID para $user"
+              continue
+            fi
 
-          curl -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-            -H "Content-type: application/json" \
-            --data "{
-              \"channel\": \"$AUTHOR_SLACK_ID\",
-              \"attachments\": [
-                {
-                  \"color\": \"#36C5F0\",
-                  \"blocks\": [
-                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
-                    { \"type\": \"section\", \"fields\": [
-                      { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
-                      { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
-                      { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
-                      { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
-                    ]},
-                    { \"type\": \"actions\", \"elements\": [
-                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
-                    ]},
-                    { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
-                  ]
-                }
-              ]
-            }"
+            curl -X POST https://slack.com/api/chat.postMessage \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              -H "Content-type: application/json" \
+              --data "{
+                \"channel\": \"$SLACK_ID\",
+                \"attachments\": [
+                  {
+                    \"color\": \"#36C5F0\",
+                    \"blocks\": [
+                      { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
+                      { \"type\": \"section\", \"fields\": [
+                        { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
+                      ]},
+                      { \"type\": \"actions\", \"elements\": [
+                        { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
+                      ]},
+                      { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
+                    ]
+                  }
+                ]
+              }"
+          done
+
 
