@@ -16,10 +16,12 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           REPO: ${{ github.repository }}
+          REQUESTED_REVIEWERS: ${{ toJson(github.event.pull_request.requested_reviewers) }}
         run: |
           MAP_FILE=".github/slack-reviewer-map.json"
 
-          REVIEWERS=$(echo '${{ toJson(github.event.pull_request.requested_reviewers) }}' | jq -r '.[].login')
+          # Lee los logins de reviewers desde la variable de entorno
+          REVIEWERS=$(echo "$REQUESTED_REVIEWERS" | jq -r '.[].login')
 
           for reviewer in $REVIEWERS; do
             SLACK_ID=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
