@@ -1,4 +1,4 @@
-name: GitKeeper – Notify Reviewers via Slack DM (manual map)
+name: GitKeeper – Notify Reviewers via Slack DM
 
 on:
   pull_request:
@@ -7,39 +7,48 @@ on:
 jobs:
   notifyReviewers:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-
-      - name: Send DM to assigned reviewers (mapped)
+        
+      - name: Notify assigned reviewers
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REPO: ${{ github.repository }}
+          REQUESTED_REVIEWERS: ${{ toJson(github.event.pull_request.requested_reviewers) }}
         run: |
-          echo "📖 Cargando mapeo de revisores..."
           MAP_FILE=".github/slack-reviewer-map.json"
 
-          REVIEWERS=$(echo '${{ toJson(github.event.pull_request.requested_reviewers) }}' | jq -r '.[].login')
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          REPO="${{ github.repository }}"
+          # Lee los logins de reviewers desde la variable de entorno
+          REVIEWERS=$(echo "$REQUESTED_REVIEWERS" | jq -r '.[].login')
 
           for reviewer in $REVIEWERS; do
-            echo "👤 Revisor asignado: $reviewer"
-
             SLACK_ID=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
-
             if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
-              echo "⚠️ No se encontró Slack ID para $reviewer en el archivo de mapeo."
+              echo "No Slack ID para $reviewer"
               continue
             fi
 
-            echo "📩 Enviando DM a $SLACK_ID..."
-
-            curl -s -X POST https://slack.com/api/chat.postMessage \
-              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-              -H "Content-type: application/json" \
-              --data "{
-                \"channel\": \"$SLACK_ID\",
-                \"text\": \"👋 You’ve been assigned to review a PR in *$REPO*.\n🔗 $PR_URL\"
-              }"
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"$SLACK_ID\",
+              \"attachments\": [
+                {
+                  \"color\": \"#2EB67D\",
+                  \"blocks\": [
+                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"🔍 Nueva Review Asignada\", \"emoji\": true } },
+                    { \"type\": \"section\", \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*Repositorio:* $REPO\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Reviewer:* $reviewer\" }
+                    ]},
+                    { \"type\": \"actions\", \"elements\": [
+                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver PR\" }, \"url\": \"$PR_URL\", \"style\": \"primary\" }
+                    ]}
+                  ]
+                }
+              ]
+          }"
           done

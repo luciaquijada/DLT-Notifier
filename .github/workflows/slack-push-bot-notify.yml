@@ -1,0 +1,91 @@
+name: Slack Push Bot Notify
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  notifyPush:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        
+      - name: Send DM and group notification via Slack bot
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          AUTHOR: ${{ github.actor }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          TIMESTAMP: ${{ github.event.head_commit.timestamp }}
+        run: |
+          EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' .github/repo-style-map.json)
+          MAP_FILE=".github/slack-reviewer-map.json"
+
+          # Notificar a todos los usuarios individuales
+          USUARIOS=$(jq -r 'keys[]' "$MAP_FILE")
+
+          for user in $USUARIOS; do
+            SLACK_ID=$(jq -r --arg user "$user" '.[$user]' "$MAP_FILE")
+            if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
+              echo "No Slack ID para $user"
+              continue
+            fi
+
+            curl -X POST https://slack.com/api/chat.postMessage \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              -H "Content-type: application/json" \
+              --data "{
+                \"channel\": \"$SLACK_ID\",
+                \"attachments\": [
+                  {
+                    \"color\": \"#36C5F0\",
+                    \"blocks\": [
+                      { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
+                      { \"type\": \"section\", \"fields\": [
+                        { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
+                      ]},
+                      { \"type\": \"actions\", \"elements\": [
+                        { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
+                      ]},
+                      { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
+                    ]
+                  }
+                ]
+              }"
+          done
+
+          # Notificar también al grupo
+          GROUP_CHANNEL="C097AENKPDX"
+
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"$GROUP_CHANNEL\",
+              \"attachments\": [
+                {
+                  \"color\": \"#36C5F0\",
+                  \"blocks\": [
+                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
+                    { \"type\": \"section\", \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
+                    ]},
+                    { \"type\": \"actions\", \"elements\": [
+                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
+                    ]},
+                    { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
+                  ]
+                }
+              ]
+            }"
