@@ -12,34 +12,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Send DM to assigned reviewers (mapped)
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-        run: |
-          echo "📖 Cargando mapeo de revisores..."
-          MAP_FILE=".github/slack-reviewer-map.json"
-
-          REVIEWERS=$(echo '${{ toJson(github.event.pull_request.requested_reviewers) }}' | jq -r '.[].login')
-          PR_URL="${{ github.event.pull_request.html_url }}"
-          REPO="${{ github.repository }}"
-
-          for reviewer in $REVIEWERS; do
-            echo "👤 Revisor asignado: $reviewer"
-
-            SLACK_ID=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
-
-            if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
-              echo "⚠️ No se encontró Slack ID para $reviewer en el archivo de mapeo."
-              continue
-            fi
-
-            echo "📩 Enviando DM a $SLACK_ID..."
-
-            curl -s -X POST https://slack.com/api/chat.postMessage \
-              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-              -H "Content-type: application/json" \
-              --data "{
-                \"channel\": \"$SLACK_ID\",
-                \"text\": \"👋 You’ve been assigned to review a PR in *$REPO*.\n🔗 $PR_URL\"
-              }"
-          done
+      - name: Send DM to assigned reviewers
+        uses: ./.github/actions/push-slack-notification
+        with:
+          mode: pr-review
+          slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          reviewers: ${{ join(github.event.pull_request.requested_reviewers.*.login, ' ') }}
+          repo_name: ${{ github.repository }}
+          pr_url: ${{ github.event.pull_request.html_url }}

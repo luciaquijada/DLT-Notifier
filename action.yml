@@ -1,41 +1,56 @@
-name: 'Slack Notifier'
-description: 'Envía notificaciones a Slack para pushes y solicitudes de revisión PR'
+name: 'Push & PR Review Slack Notification'
+
+description: 'Envía notificaciones por DM vía Slack Bot para pushes y asignación de reviewers'
 
 inputs:
   mode:
-    description: 'Tipo de notificación: push o pr-review'
+    description: 'Modo: push o pr-review'
     required: true
-  slack_webhook_url:
-    description: 'Webhook Slack para notificaciones push'
-    required: false
   slack_bot_token:
-    description: 'Token Slack Bot para DM en pr-review'
+    description: 'Token del bot de Slack'
+    required: true
+  push_recipient:
+    description: 'Slack ID para notificaciones de push (modo push)'
+    required: false
+  reviewers:
+    description: 'Lista de reviewers (modo pr-review)'
     required: false
   repo_name:
-    description: 'Repositorio GitHub (owner/repo)'
-    required: true
+    description: 'Nombre del repositorio'
+    required: false
   branch:
     description: 'Nombre de la rama'
     required: false
   author:
-    description: 'Autor del commit o evento'
+    description: 'Autor del commit'
     required: false
   commit_message:
     description: 'Mensaje del commit'
     required: false
   commit_url:
-    description: 'URL al commit en GitHub'
+    description: 'URL del commit'
     required: false
   timestamp:
-    description: 'Timestamp del evento'
-    required: false
-  reviewers:
-    description: 'Lista de reviewers separados por comas (solo pr-review)'
+    description: 'Timestamp del commit'
     required: false
   pr_url:
-    description: 'URL de la Pull Request (solo pr-review)'
+    description: 'URL del pull request (modo pr-review)'
     required: false
 
 runs:
   using: 'bash'
-  main: 'send.sh'
+  steps:
+    - run: |
+        chmod +x $GITHUB_ACTION_PATH/send.sh
+        MODE="${{ inputs.mode }}" \
+        SLACK_BOT_TOKEN="${{ inputs.slack_bot_token }}" \
+        PUSH_RECIPIENT="${{ inputs.push_recipient }}" \
+        REVIEWERS="${{ inputs.reviewers }}" \
+        REPO_NAME="${{ inputs.repo_name }}" \
+        BRANCH="${{ inputs.branch }}" \
+        AUTHOR="${{ inputs.author }}" \
+        COMMIT_MESSAGE="${{ inputs.commit_message }}" \
+        COMMIT_URL="${{ inputs.commit_url }}" \
+        TIMESTAMP="${{ inputs.timestamp }}" \
+        PR_URL="${{ inputs.pr_url }}" \
+        bash $GITHUB_ACTION_PATH/send.sh
