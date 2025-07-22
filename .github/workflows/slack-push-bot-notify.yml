@@ -10,6 +10,9 @@ jobs:
   notifyPush:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        
       - name: Send DM via Slack bot
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

@@ -8,6 +8,9 @@ jobs:
   notifyReviewers:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        
       - name: Notify assigned reviewers
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
