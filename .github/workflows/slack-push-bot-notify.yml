@@ -63,7 +63,7 @@ jobs:
           done
 
           # Notificar también al grupo
-          GROUP_CHANNEL="C097AENKPDX"
+          GROUP_CHANNEL="D097AENKPDX"
 
           curl -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
