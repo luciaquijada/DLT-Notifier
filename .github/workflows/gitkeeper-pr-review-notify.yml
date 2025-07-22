@@ -30,11 +30,25 @@ jobs:
               continue
             fi
 
-            curl -X POST https://slack.com/api/chat.postMessage \
-              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-              -H "Content-type: application/json" \
-              --data "{
-                \"channel\": \"$SLACK_ID\",
-                \"text\": \"👋 Te han asignado para revisar un PR en *$REPO*.\n🔗 $PR_URL\"
-              }"
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"$SLACK_ID\",
+              \"attachments\": [
+                {
+                  \"color\": \"#2EB67D\",
+                  \"blocks\": [
+                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"🔍 Nueva Review Asignada\", \"emoji\": true } },
+                    { \"type\": \"section\", \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*Repositorio:* $REPO\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Reviewer:* $reviewer\" }
+                    ]},
+                    { \"type\": \"actions\", \"elements\": [
+                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver PR\" }, \"url\": \"$PR_URL\", \"style\": \"primary\" }
+                    ]}
+                  ]
+                }
+              ]
+          }"
           done

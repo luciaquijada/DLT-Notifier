@@ -38,18 +38,23 @@ jobs:
             -H "Content-type: application/json" \
             --data "{
               \"channel\": \"$AUTHOR_SLACK_ID\",
-              \"text\": \"$EMOJI New push in *$REPO* on branch *$BRANCH*.\",
-              \"blocks\": [
-                { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
-                { \"type\": \"section\", \"fields\": [
-                  { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
-                  { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
-                ]},
-                { \"type\": \"actions\", \"elements\": [
-                  { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
-                ]},
-                { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ] }
+              \"attachments\": [
+                {
+                  \"color\": \"#36C5F0\",
+                  \"blocks\": [
+                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
+                    { \"type\": \"section\", \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
+                    ]},
+                    { \"type\": \"actions\", \"elements\": [
+                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
+                    ]},
+                    { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
+                  ]
+                }
               ]
             }"
+
