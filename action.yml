@@ -1,45 +1,41 @@
-name: GitKeeper Slack Notifier
-description: Send Slack notifications on push or PR assignment
+name: 'Slack Notifier'
+description: 'Envía notificaciones a Slack para pushes y solicitudes de revisión PR'
 
 inputs:
   mode:
-    description: "Operation mode: 'push' or 'pr-review'"
+    description: 'Tipo de notificación: push o pr-review'
     required: true
-  webhook_url:
+  slack_webhook_url:
+    description: 'Webhook Slack para notificaciones push'
     required: false
   slack_bot_token:
+    description: 'Token Slack Bot para DM en pr-review'
     required: false
   repo_name:
-    required: false
+    description: 'Repositorio GitHub (owner/repo)'
+    required: true
   branch:
+    description: 'Nombre de la rama'
     required: false
   author:
+    description: 'Autor del commit o evento'
     required: false
   commit_message:
+    description: 'Mensaje del commit'
     required: false
   commit_url:
+    description: 'URL al commit en GitHub'
     required: false
   timestamp:
-    required: false
-  pr_url:
+    description: 'Timestamp del evento'
     required: false
   reviewers:
+    description: 'Lista de reviewers separados por comas (solo pr-review)'
+    required: false
+  pr_url:
+    description: 'URL de la Pull Request (solo pr-review)'
     required: false
 
 runs:
-  using: "composite"
-  steps:
-    - run: bash ${{ github.action_path }}/send.sh
-      shell: bash
-      env:
-        MODE: ${{ inputs.mode }}
-        SLACK_WEBHOOK_URL: ${{ inputs.webhook_url }}
-        SLACK_BOT_TOKEN: ${{ inputs.slack_bot_token }}
-        REPO: ${{ inputs.repo_name }}
-        BRANCH: ${{ inputs.branch }}
-        AUTHOR: ${{ inputs.author }}
-        COMMIT_MESSAGE: ${{ inputs.commit_message }}
-        COMMIT_URL: ${{ inputs.commit_url }}
-        TIMESTAMP: ${{ inputs.timestamp }}
-        PR_URL: ${{ inputs.pr_url }}
-        REVIEWERS: ${{ inputs.reviewers }}
+  using: 'bash'
+  main: 'send.sh'

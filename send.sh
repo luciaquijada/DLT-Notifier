@@ -1,9 +1,26 @@
 #!/bin/bash
+set -e
 
-if [ "$MODE" = "push" ]; then
+MODE="${INPUT_MODE}"
+REPO="${INPUT_REPO_NAME}"
+BRANCH="${INPUT_BRANCH}"
+AUTHOR="${INPUT_AUTHOR}"
+COMMIT_MESSAGE="${INPUT_COMMIT_MESSAGE}"
+COMMIT_URL="${INPUT_COMMIT_URL}"
+TIMESTAMP="${INPUT_TIMESTAMP}"
+REVIEWERS="${INPUT_REVIEWERS}"
+PR_URL="${INPUT_PR_URL}"
+
+SLACK_WEBHOOK_URL="${INPUT_SLACK_WEBHOOK_URL}"
+SLACK_BOT_TOKEN="${INPUT_SLACK_BOT_TOKEN}"
+
+REPO_STYLE_MAP=".github/repo-style-map.json"
+SLACK_REVIEWER_MAP=".github/slack-reviewer-map.json"
+
+function notify_push() {
   EMOJI="📦"
-  if [ -f ".github/repo-style-map.json" ]; then
-    VALUE=$(jq -r --arg repo "$REPO" '.[$repo]' .github/repo-style-map.json)
+  if [ -f "$REPO_STYLE_MAP" ]; then
+    VALUE=$(jq -r --arg repo "$REPO" '.[$repo]' "$REPO_STYLE_MAP")
     if [ "$VALUE" != "null" ]; then
       EMOJI="$VALUE"
     fi
@@ -45,23 +62,27 @@ if [ "$MODE" = "push" ]; then
 }
 EOF
 )
-  curl -X POST -H "Content-type: application/json" --data "$JSON" "$SLACK_WEBHOOK_URL"
 
-elif [ "$MODE" = "pr-review" ]; then
-  echo "📚 Cargando mapa de revisores..."
-  MAP_FILE= MAP_FILE="${GITHUB_ACTION_PATH}/slack-reviewer-map.json"
+  curl -s -X POST -H "Content-type: application/json" --data "$JSON" "$SLACK_WEBHOOK_URL"
+  echo "✅ Notificación push enviada a Slack"
+}
 
-  echo "🔍 Obteniendo reviewers..."
-  IFS=',' read -ra REVIEWERS <<< "$REVIEWERS"
+function notify_pr_review() {
+  if [ ! -f "$SLACK_REVIEWER_MAP" ]; then
+    echo "⚠️ Archivo de mapeo de reviewers no encontrado: $SLACK_REVIEWER_MAP"
+    exit 1
+  fi
 
-  for reviewer in "${REVIEWERS[@]}"; do
-    slack_id=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
+  IFS=',' read -ra REVIEWER_ARRAY <<< "$REVIEWERS"
+
+  for reviewer in "${REVIEWER_ARRAY[@]}"; do
+    slack_id=$(jq -r --arg user "$reviewer" '.[$user]' "$SLACK_REVIEWER_MAP")
     if [ "$slack_id" == "null" ] || [ -z "$slack_id" ]; then
       echo "⚠️ No Slack ID para $reviewer"
       continue
     fi
 
-    message="👋 Has sido asignado para revisar una PR en *$REPO*.\n🔗 $PR_URL"
+    message="👋 You’ve been assigned to review a PR in *$REPO*.\n🔗 $PR_URL"
 
     curl -s -X POST https://slack.com/api/chat.postMessage \
       -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
@@ -70,9 +91,27 @@ elif [ "$MODE" = "pr-review" ]; then
         \"channel\": \"$slack_id\",
         \"text\": \"$message\"
       }"
+    echo "📩 DM enviada a $reviewer ($slack_id)"
   done
+}
 
-else
-  echo "❌ Unknown MODE: $MODE"
-  exit 1
-fi
+case "$MODE" in
+  push)
+    if [ -z "$SLACK_WEBHOOK_URL" ]; then
+      echo "❌ SLACK_WEBHOOK_URL es requerido para modo push"
+      exit 1
+    fi
+    notify_push
+    ;;
+  pr-review)
+    if [ -z "$SLACK_BOT_TOKEN" ]; then
+      echo "❌ SLACK_BOT_TOKEN es requerido para modo pr-review"
+      exit 1
+    fi
+    notify_pr_review
+    ;;
+  *)
+    echo "❌ Modo desconocido: $MODE"
+    exit 1
+    ;;
+esac
