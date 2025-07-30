@@ -25,11 +25,18 @@ jobs:
         run: |
           EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' .github/repo-style-map.json)
           MAP_FILE=".github/slack-reviewer-map.json"
+          REPO_MEMBERS_FILE=".github/repo-members-map.json"
 
-          # Notificar a todos los usuarios individuales
-          USUARIOS=$(jq -r 'keys[]' "$MAP_FILE")
+          # Obtener miembros del repositorio actual
+          REPO_MEMBERS=$(jq -r --arg repo "$REPO" '.[$repo] // []' "$REPO_MEMBERS_FILE")
+          
+          if [ "$REPO_MEMBERS" == "[]" ]; then
+            echo "No hay miembros configurados para el repositorio $REPO"
+            exit 0
+          fi
 
-          for user in $USUARIOS; do
+          # Notificar solo a los miembros del repositorio
+          echo "$REPO_MEMBERS" | jq -r '.[]' | while read user; do
             SLACK_ID=$(jq -r --arg user "$user" '.[$user]' "$MAP_FILE")
             if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
               echo "No Slack ID para $user"
@@ -62,8 +69,8 @@ jobs:
               }"
           done
 
-          # Notificar también al grupo
-          GROUP_CHANNEL="C097AENKPDX"
+          # Notificar también al grupo (opcional, puedes quitar esta parte si no quieres notificación grupal)
+          GROUP_CHANNEL="D097AENKPDX"
 
           curl -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
