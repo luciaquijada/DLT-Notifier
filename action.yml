@@ -1,0 +1,182 @@
+name: 'GitKeeper - DLT Notifier'
+description: 'Notifica a través de Slack cuando se asignan reviews de PR o se hacen push a branches principales'
+author: 'luciaquijada'
+branding:
+  icon: 'bell'
+  color: 'blue'
+
+inputs:
+  slack-bot-token:
+    description: 'Token del bot de Slack para enviar notificaciones'
+    required: true
+  notification-type:
+    description: 'Tipo de notificación: "pr-review" para reviews de PR o "push" para commits'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout GitKeeper config files
+      uses: actions/checkout@v4
+      with:
+        repository: luciaquijada/DLT-Notifier
+        path: .gitkeeper-config
+        sparse-checkout: |
+          .github/repo-members-map.json
+          .github/repo-style-map.json
+          .github/slack-reviewer-map.json
+
+    - name: Handle PR Review Notification
+      if: inputs.notification-type == 'pr-review'
+      shell: bash
+      env:
+        SLACK_BOT_TOKEN: ${{ inputs.slack-bot-token }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        REPO: ${{ github.repository }}
+        REQUESTED_REVIEWERS: ${{ toJson(github.event.pull_request.requested_reviewers) }}
+      run: |
+        MAP_FILE=".gitkeeper-config/.github/slack-reviewer-map.json"
+        
+        echo "🔍 Procesando notificación de PR review para $REPO"
+        
+        # Verificar que el archivo de mapeo existe
+        if [ ! -f "$MAP_FILE" ]; then
+          echo "❌ Error: No se encontró el archivo $MAP_FILE"
+          exit 1
+        fi
+        
+        # Lee los logins de reviewers desde la variable de entorno
+        REVIEWERS=$(echo "$REQUESTED_REVIEWERS" | jq -r '.[].login')
+        
+        if [ -z "$REVIEWERS" ]; then
+          echo "ℹ️  No hay reviewers asignados en este PR"
+          exit 0
+        fi
+
+        for reviewer in $REVIEWERS; do
+          echo "📤 Procesando notificación para reviewer: $reviewer"
+          
+          SLACK_ID=$(jq -r --arg user "$reviewer" '.[$user]' "$MAP_FILE")
+          if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
+            echo "⚠️  No se encontró Slack ID para el usuario: $reviewer"
+            continue
+          fi
+          
+          echo "📱 Enviando notificación a Slack ID: $SLACK_ID"
+
+          RESPONSE=$(curl -s -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-type: application/json" \
+            --data "{
+              \"channel\": \"$SLACK_ID\",
+              \"attachments\": [
+                {
+                  \"color\": \"#2EB67D\",
+                  \"blocks\": [
+                    { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"🔍 Nueva Review Asignada\", \"emoji\": true } },
+                    { \"type\": \"section\", \"fields\": [
+                      { \"type\": \"mrkdwn\", \"text\": \"*Repositorio:* $REPO\" },
+                      { \"type\": \"mrkdwn\", \"text\": \"*Reviewer:* $reviewer\" }
+                    ]},
+                    { \"type\": \"actions\", \"elements\": [
+                      { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver PR\" }, \"url\": \"$PR_URL\", \"style\": \"primary\" }
+                    ]}
+                  ]
+                }
+              ]
+            }")
+          
+          # Verificar si la notificación fue exitosa
+          if echo "$RESPONSE" | jq -r '.ok' | grep -q true; then
+            echo "✅ Notificación enviada exitosamente a $reviewer"
+          else
+            echo "❌ Error enviando notificación a $reviewer: $(echo "$RESPONSE" | jq -r '.error // "Error desconocido"')"
+          fi
+        done
+
+    - name: Handle Push Notification
+      if: inputs.notification-type == 'push'
+      shell: bash
+      env:
+        SLACK_BOT_TOKEN: ${{ inputs.slack-bot-token }}
+        REPO: ${{ github.repository }}
+        BRANCH: ${{ github.ref_name }}
+        AUTHOR: ${{ github.actor }}
+        COMMIT_MSG: ${{ github.event.head_commit.message }}
+        COMMIT_URL: ${{ github.event.head_commit.url }}
+        TIMESTAMP: ${{ github.event.head_commit.timestamp }}
+      run: |
+        echo "📤 Procesando notificación de push para $REPO en branch $BRANCH"
+        
+        STYLE_MAP_FILE=".gitkeeper-config/.github/repo-style-map.json"
+        SLACK_MAP_FILE=".gitkeeper-config/.github/slack-reviewer-map.json"
+        REPO_MEMBERS_FILE=".gitkeeper-config/.github/repo-members-map.json"
+        
+        # Verificar que los archivos existen
+        for file in "$STYLE_MAP_FILE" "$SLACK_MAP_FILE" "$REPO_MEMBERS_FILE"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Error: No se encontró el archivo $file"
+            exit 1
+          fi
+        done
+
+        # Obtener emoji del repositorio
+        EMOJI=$(jq -r --arg repo "$REPO" '.[$repo] // "📦"' "$STYLE_MAP_FILE")
+        echo "🎨 Usando emoji: $EMOJI para el repositorio $REPO"
+
+        # Obtener miembros del repositorio actual
+        REPO_MEMBERS=$(jq -r --arg repo "$REPO" '.[$repo] // []' "$REPO_MEMBERS_FILE")
+        
+        if [ "$REPO_MEMBERS" == "[]" ]; then
+          echo "⚠️  No hay miembros configurados para el repositorio $REPO"
+          echo "ℹ️  Solo se enviará notificación al canal grupal"
+        else
+          echo "👥 Miembros encontrados para $REPO: $(echo "$REPO_MEMBERS" | jq -r 'join(", ")')"
+          
+          # Notificar a los miembros del repositorio
+          echo "$REPO_MEMBERS" | jq -r '.[]' | while read user; do
+            echo "📤 Procesando notificación para miembro: $user"
+            
+            SLACK_ID=$(jq -r --arg user "$user" '.[$user]' "$SLACK_MAP_FILE")
+            if [ "$SLACK_ID" == "null" ] || [ -z "$SLACK_ID" ]; then
+              echo "⚠️  No se encontró Slack ID para el usuario: $user"
+              continue
+            fi
+            
+            echo "📱 Enviando notificación a Slack ID: $SLACK_ID"
+
+            RESPONSE=$(curl -s -X POST https://slack.com/api/chat.postMessage \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              -H "Content-type: application/json" \
+              --data "{
+                \"channel\": \"$SLACK_ID\",
+                \"attachments\": [
+                  {
+                    \"color\": \"#36C5F0\",
+                    \"blocks\": [
+                      { \"type\": \"header\", \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Push Notification\", \"emoji\": true } },
+                      { \"type\": \"section\", \"fields\": [
+                        { \"type\": \"mrkdwn\", \"text\": \"*Repo:* $REPO\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Branch:* $BRANCH\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Author:* $AUTHOR\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Commit:* $COMMIT_MSG\" }
+                      ]},
+                      { \"type\": \"actions\", \"elements\": [
+                        { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Ver commit en GitHub\" }, \"url\": \"$COMMIT_URL\", \"style\": \"primary\" }
+                      ]},
+                      { \"type\": \"context\", \"elements\": [ { \"type\": \"mrkdwn\", \"text\": \"⏰ $TIMESTAMP\" } ]}
+                    ]
+                  }
+                ]
+              }")
+            
+            # Verificar si la notificación fue exitosa
+            if echo "$RESPONSE" | jq -r '.ok' | grep -q true; then
+              echo "✅ Notificación enviada exitosamente a $user"
+            else
+              echo "❌ Error enviando notificación a $user: $(echo "$RESPONSE" | jq -r '.error // "Error desconocido"')"
+            fi
+          done
+        fi
+        
+        echo "🎉 Proceso de push notification completado"
