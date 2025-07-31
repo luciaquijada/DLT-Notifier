@@ -22,9 +22,9 @@ runs:
         repository: luciaquijada/DLT-Notifier
         path: .gitkeeper-config
         sparse-checkout: |
-          repo-members-map.json
-          repo-style-map.json
-          slack-reviewer-map.json
+          .github/repo-members-map.json
+          .github/repo-style-map.json
+          .github/slack-reviewer-map.json
 
     - name: Handle PR Review Notification
       if: inputs.notification-type == 'pr-review'
@@ -35,7 +35,7 @@ runs:
         REPO: ${{ github.repository }}
         REQUESTED_REVIEWERS: ${{ toJson(github.event.pull_request.requested_reviewers) }}
       run: |
-        MAP_FILE=".gitkeeper-config/slack-reviewer-map.json"
+        MAP_FILE=".gitkeeper-config/.github/slack-reviewer-map.json"
         
         echo "🔍 Procesando notificación de PR review para $REPO"
         
@@ -108,9 +108,9 @@ runs:
       run: |
         echo "📤 Procesando notificación de push para $REPO en branch $BRANCH"
         
-        STYLE_MAP_FILE=".gitkeeper-config/repo-style-map.json"
-        SLACK_MAP_FILE=".gitkeeper-config/slack-reviewer-map.json"
-        REPO_MEMBERS_FILE=".gitkeeper-config/repo-members-map.json"
+        STYLE_MAP_FILE=".gitkeeper-config/.github/repo-style-map.json"
+        SLACK_MAP_FILE=".gitkeeper-config/.github/slack-reviewer-map.json"
+        REPO_MEMBERS_FILE=".gitkeeper-config/.github/repo-members-map.json"
         
         # Verificar que los archivos existen
         for file in "$STYLE_MAP_FILE" "$SLACK_MAP_FILE" "$REPO_MEMBERS_FILE"; do
