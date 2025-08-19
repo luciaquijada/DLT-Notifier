@@ -1,5 +1,6 @@
 {
   "luciaquijada/DLT-Notifier": ["luciaquijada", "Moli-M", "angelbitter"],
   "bisite/idreco": ["luciaquijada", "Moli-M"],
-  "AIRInstitute/ELJAP-interactivo": ["luciaquijada", "angelbitter"]
+  "AIRInstitute/ELJAP-interactivo": ["luciaquijada", "angelbitter"],
+  "AIRInstitute/AirInteraction": ["luciaquijada", "angelbitter"]
 }
