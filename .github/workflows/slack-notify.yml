@@ -1,0 +1,28 @@
+# WORKFLOW DESACTIVADO - Usando nuevo sistema con backend
+# name: Notificar push a develop
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  notificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar mensaje a Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": ":rocket: Se ha hecho *push* a la rama *develop* en *${{ github.repository }}*",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "mrkdwn_in": ["text"],
+                  "text": "*Autor:* ${{ github.actor }}\n:link: <https://github.com/${{ github.repository }}/commits/develop|Ver últimos commits>\n\nRecuerda hacer pull para evitar conflictos. :warning:"
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
