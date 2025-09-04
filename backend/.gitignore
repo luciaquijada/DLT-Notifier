@@ -1,0 +1,25 @@
+# Variables de entorno locales
+.env
+.env.local
+
+# Dependencias
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Opcional: archivos temporales del editor
+.DS_Store
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
