@@ -6,53 +6,70 @@ const SlackService = require('./SlackService');
 class GitHubWebhookService {
   static async handlePullRequest(payload) {
     try {
+      console.log(`🔔 Procesando evento: pull_request para ${payload.repository.full_name}`);
+      console.log(`📄 Datos del evento:`, {
+        action: payload.action,
+        after: payload.after,
+        before: payload.before,
+        number: payload.number,
+        pull_request: {
+          // Solo log de campos relevantes para reducir ruido
+          number: payload.pull_request.number,
+          title: payload.pull_request.title,
+          user: { login: payload.pull_request.user.login },
+          html_url: payload.pull_request.html_url,
+          state: payload.pull_request.state
+        }
+      });
+
       const action = payload.action;
       const pullRequest = payload.pull_request;
       const repository = payload.repository;
       const sender = payload.sender;
 
+      console.log(`🔀 Procesando Pull Request...`);
+
       // Buscar el proyecto en la base de datos
       const project = await Project.getByGithubRepo(repository.full_name);
       if (!project) {
-        console.log(`Proyecto no encontrado: ${repository.full_name}`);
-        return;
+        console.log(`❌ Proyecto no encontrado: ${repository.full_name}`);
+        console.log(`💡 Para configurar este proyecto, ejecuta:`);
+        console.log(`   cd backend && node scripts/add-dlt-project.js`);
+        return { error: 'Project not found', repository: repository.full_name };
       }
+
+      console.log(`✅ Proyecto encontrado: ${project.name}`);
 
       // Buscar el usuario que hizo la acción
       let user = null;
       try {
         user = await User.getByGithubUsername(sender.login);
+        if (user) {
+          console.log(`✅ Usuario encontrado: ${user.github_username}`);
+        } else {
+          console.log(`⚠️ Usuario no encontrado en la base de datos: ${sender.login}`);
+        }
       } catch (error) {
-        console.log(`Usuario no encontrado: ${sender.login}`);
+        console.log(`⚠️ Error buscando usuario: ${sender.login}`, error.message);
       }
 
-      // Crear actividad
+      // Crear actividad - usando solo campos que sabemos que existen
       const activityData = {
         project_id: project.id,
         user_id: user?.id || null,
         event_type: 'pull_request',
-        event_data: {
-          action,
-          pr_number: pullRequest.number,
-          pr_title: pullRequest.title,
-          pr_url: pullRequest.html_url,
-          pr_author: pullRequest.user.login,
-          reviewers: pullRequest.requested_reviewers?.map(r => r.login) || [],
-          branch: pullRequest.head.ref,
-          base_branch: pullRequest.base.ref
-        },
-        github_event_id: `pr_${pullRequest.id}`,
-        pr_number: pullRequest.number,
-        pr_title: pullRequest.title,
-        pr_url: pullRequest.html_url,
-        branch_name: pullRequest.head.ref
+        title: `PR #${pullRequest.number}: ${pullRequest.title}` // Adding required title field
       };
 
       const activity = await Activity.create(activityData);
+      console.log(`✅ Actividad creada: ${activity.id}`);
 
       // Enviar notificaciones si es una nueva PR o si se solicitan revisores
       if (action === 'opened' || action === 'review_requested') {
+        console.log(`📩 Enviando notificaciones para acción: ${action}`);
         await this.sendPullRequestNotifications(project, activity);
+      } else {
+        console.log(`ℹ️ Sin notificaciones para acción: ${action}`);
       }
 
       return activity;
@@ -83,20 +100,12 @@ class GitHubWebhookService {
         console.log(`Usuario no encontrado: ${pusher.name}`);
       }
 
-      // Crear actividad
+      // Crear actividad - usando solo campos básicos
       const activityData = {
         project_id: project.id,
         user_id: user?.id || null,
         event_type: 'push',
-        event_data: {
-          commits: commits.length,
-          commit_messages: commits.map(c => c.message),
-          branch: payload.ref.replace('refs/heads/', ''),
-          pusher: pusher.name,
-          compare_url: payload.compare
-        },
-        commit_sha: payload.after,
-        branch_name: payload.ref.replace('refs/heads/', '')
+        title: `Push to ${payload.ref.replace('refs/heads/', '')} (${commits.length} commits)` // Adding required title field
       };
 
       const activity = await Activity.create(activityData);

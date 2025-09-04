@@ -27,6 +27,19 @@ class WebhookController {
           });
       }
 
+      // Si el resultado incluye un error (como proyecto no encontrado), 
+      // aún respondemos con 200 para que GitHub no reintente
+      if (result && result.error) {
+        console.log(`⚠️ Webhook procesado con advertencias: ${result.error}`);
+        return res.status(200).json({
+          success: true,
+          message: `Evento ${event} recibido con advertencias`,
+          warning: result.error,
+          data: result
+        });
+      }
+
+      console.log(`✅ Webhook procesado exitosamente: ${event}`);
       res.status(200).json({
         success: true,
         message: `Evento ${event} procesado exitosamente`,
@@ -34,10 +47,13 @@ class WebhookController {
       });
 
     } catch (error) {
-      console.error('Error procesando webhook:', error);
-      res.status(500).json({
+      console.error('❌ Error procesando evento de GitHub:', error);
+      
+      // Aún respondemos con 200 para que GitHub no reintente el webhook
+      res.status(200).json({
         success: false,
-        error: 'Error procesando webhook'
+        error: 'Error interno procesando webhook',
+        message: error.message
       });
     }
   }

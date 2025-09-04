@@ -28,10 +28,10 @@ class Project {
       .from('projects')
       .select('*')
       .eq('github_repo', repo)
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
-    return data;
+    return data; // returns null if no project found
   }
 
   static async create(projectData) {

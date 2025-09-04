@@ -28,10 +28,10 @@ class User {
       .from('users')
       .select('*')
       .eq('github_username', username)
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
-    return data;
+    return data; // returns null if no user found
   }
 
   static async create(userData) {
